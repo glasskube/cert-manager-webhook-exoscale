@@ -1,0 +1,82 @@
+{
+  "bootstrap-sha": "0dcb6537405096ec6415b5e81daa6568323e9833",
+  "packages": {
+    ".": {
+      "include-v-in-tag": false,
+      "release-type": "go",
+      "prerelease": false,
+      "draft": false,
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        "README.md",
+        {
+          "type": "yaml",
+          "path": "deploy/cert-manager-webhook-exoscale/Chart.yaml",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "yaml",
+          "path": "deploy/cert-manager-webhook-exoscale/Chart.yaml",
+          "jsonpath": "$.appVersion"
+        }
+      ],
+      "changelog-sections": [
+        {
+          "type": "feat",
+          "section": "Features"
+        },
+        {
+          "type": "fix",
+          "section": "Bug Fixes"
+        },
+        {
+          "type": "chore",
+          "section": "Other"
+        },
+        {
+          "type": "docs",
+          "section": "Docs"
+        },
+        {
+          "type": "perf",
+          "section": "Performance"
+        },
+        {
+          "type": "build",
+          "hidden": true,
+          "section": "Build"
+        },
+        {
+          "type": "deps",
+          "section": "Dependency Updates"
+        },
+        {
+          "type": "ci",
+          "hidden": true,
+          "section": "CI"
+        },
+        {
+          "type": "refactor",
+          "section": "Refactoring"
+        },
+        {
+          "type": "revert",
+          "hidden": true,
+          "section": "Reverts"
+        },
+        {
+          "type": "style",
+          "hidden": true,
+          "section": "Styling"
+        },
+        {
+          "type": "test",
+          "hidden": true,
+          "section": "Tests"
+        }
+      ]
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+}
