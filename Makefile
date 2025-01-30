@@ -29,6 +29,10 @@ clean:
 
 .PHONY: build
 build:
+	CGO_ENABLED=0 go build -o $(OUT)/webhook -ldflags '-w -extldflags "-static"' .
+
+.PHONY: docker-build
+docker-build:
 	docker build -t "$(IMAGE_NAME):$(IMAGE_TAG)" --network host .
 
 .PHONY: rendered-manifest.yaml
