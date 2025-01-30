@@ -1,0 +1,14 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "forkProcessing": "enabled",
+  "postUpdateOptions": ["gomodTidy"],
+  "extends": ["config:recommended"],
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions", "gomod", "dockerfile"],
+      "matchUpdateTypes": ["patch"],
+      "matchCurrentVersion": "!/^0/",
+      "automerge": true
+    }
+  ]
+}
