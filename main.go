@@ -1,15 +1,15 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	"context"
 	"os"
 
-	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/client-go/rest"
-
-	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
+	acmev1alpha1 "github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
+	egoscale "github.com/exoscale/egoscale/v3"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 )
 
 var GroupName = os.Getenv("GROUP_NAME")
@@ -40,7 +40,7 @@ type customDNSProviderSolver struct {
 	// 3. uncomment the relevant code in the Initialize method below
 	// 4. ensure your webhook's service account has the required RBAC role
 	//    assigned to it for interacting with the Kubernetes APIs you need.
-	//client kubernetes.Clientset
+	client *kubernetes.Clientset
 }
 
 // customDNSProviderConfig is a structure that is used to decode into when
@@ -63,8 +63,10 @@ type customDNSProviderConfig struct {
 	// These fields will be set by users in the
 	// `issuer.spec.acme.dns01.providers.webhook.config` field.
 
-	//Email           string `json:"email"`
-	//APIKeySecretRef v1alpha1.SecretKeySelector `json:"apiKeySecretRef"`
+	APIKey     string        `json:"apiKey"`
+	APISecret  string        `json:"apiSecret"`
+	SecretName string        `json:"secretName"`
+	DomainID   egoscale.UUID `json:"domainId"`
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -74,7 +76,7 @@ type customDNSProviderConfig struct {
 // within a single webhook deployment**.
 // For example, `cloudflare` may be used as the name of a solver.
 func (c *customDNSProviderSolver) Name() string {
-	return "my-custom-solver"
+	return "exoscale"
 }
 
 // Present is responsible for actually presenting the DNS record with the
@@ -82,16 +84,25 @@ func (c *customDNSProviderSolver) Name() string {
 // This method should tolerate being called multiple times with the same value.
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
-func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	cfg, err := loadConfig(ch.Config)
-	if err != nil {
+func (c *customDNSProviderSolver) Present(ch *acmev1alpha1.ChallengeRequest) error {
+	ctx := context.TODO()
+	log := setupLogger(ctx, ch).WithValues("method", "present")
+	ctx = klog.NewContext(ctx, log)
+
+	log.Info("running present")
+
+	if cc, err := NewChallengeContext(ctx, c.client, ch); err != nil {
 		return err
+	} else if cc.Record != nil {
+		log.Info("record already exists", "recordId", cc.Record.ID)
+	} else {
+		if ref, err := cc.CreateRecord(ctx); err != nil {
+			return err
+		} else {
+			log.Info("record created", "recordId", ref.ID)
+		}
 	}
 
-	// TODO: do something more useful with the decoded configuration
-	fmt.Printf("Decoded configuration %v", cfg)
-
-	// TODO: add code that sets a record in the DNS provider's console
 	return nil
 }
 
@@ -101,8 +112,25 @@ func (c *customDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 // value provided on the ChallengeRequest should be cleaned up.
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
-func (c *customDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	// TODO: add code that deletes a record from the DNS provider's console
+func (c *customDNSProviderSolver) CleanUp(ch *acmev1alpha1.ChallengeRequest) error {
+	ctx := context.TODO()
+	log := setupLogger(ctx, ch).WithValues("method", "cleanup")
+	ctx = klog.NewContext(ctx, log)
+
+	log.Info("running cleanup")
+
+	if cc, err := NewChallengeContext(ctx, c.client, ch); err != nil {
+		return err
+	} else if cc.Record != nil {
+		if err := cc.DeleteRecord(ctx); err != nil {
+			return err
+		} else {
+			log.Info("record deleted", "recordId", cc.Record.ID)
+		}
+	} else {
+		log.Info("record does not exist")
+	}
+
 	return nil
 }
 
@@ -116,31 +144,20 @@ func (c *customDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 // The stopCh can be used to handle early termination of the webhook, in cases
 // where a SIGTERM or similar signal is sent to the webhook process.
 func (c *customDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
-	///// UNCOMMENT THE BELOW CODE TO MAKE A KUBERNETES CLIENTSET AVAILABLE TO
-	///// YOUR CUSTOM DNS PROVIDER
-
-	//cl, err := kubernetes.NewForConfig(kubeClientConfig)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//c.client = cl
-
-	///// END OF CODE TO MAKE KUBERNETES CLIENTSET AVAILABLE
+	cl, err := kubernetes.NewForConfig(kubeClientConfig)
+	if err != nil {
+		return err
+	}
+	c.client = cl
 	return nil
 }
 
-// loadConfig is a small helper function that decodes JSON configuration into
-// the typed config struct.
-func loadConfig(cfgJSON *extapi.JSON) (customDNSProviderConfig, error) {
-	cfg := customDNSProviderConfig{}
-	// handle the 'base case' where no configuration has been provided
-	if cfgJSON == nil {
-		return cfg, nil
-	}
-	if err := json.Unmarshal(cfgJSON.Raw, &cfg); err != nil {
-		return cfg, fmt.Errorf("error decoding solver config: %v", err)
-	}
-
-	return cfg, nil
+func setupLogger(ctx context.Context, ch *acmev1alpha1.ChallengeRequest) klog.Logger {
+	return klog.FromContext(ctx).WithValues(
+		"challengeUid", ch.UID,
+		"action", ch.Action,
+		"dnsName", ch.DNSName,
+		"fqdn", ch.ResolvedFQDN,
+		"key", ch.Key,
+	)
 }

@@ -1,0 +1,64 @@
+---
+# Create a selfsigned Issuer, in order to create a root CA certificate for
+# signing webhook serving certificates
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "cert-manager-webhook-exoscale.selfSignedIssuer" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "cert-manager-webhook-exoscale.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+
+---
+
+# Generate a CA Certificate used to sign certificates for the webhook
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "cert-manager-webhook-exoscale.rootCACertificate" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "cert-manager-webhook-exoscale.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "cert-manager-webhook-exoscale.rootCACertificate" . }}
+  duration: 43800h # 5y
+  issuerRef:
+    name: {{ include "cert-manager-webhook-exoscale.selfSignedIssuer" . }}
+  commonName: "ca.cert-manager-webhook-exoscale.cert-manager"
+  isCA: true
+
+---
+
+# Create an Issuer that uses the above generated CA certificate to issue certs
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: {{ include "cert-manager-webhook-exoscale.rootCAIssuer" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "cert-manager-webhook-exoscale.labels" . | nindent 4 }}
+spec:
+  ca:
+    secretName: {{ include "cert-manager-webhook-exoscale.rootCACertificate" . }}
+
+---
+
+# Finally, generate a serving certificate for the webhook to use
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "cert-manager-webhook-exoscale.servingCertificate" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "cert-manager-webhook-exoscale.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "cert-manager-webhook-exoscale.servingCertificate" . }}
+  duration: 8760h # 1y
+  issuerRef:
+    name: {{ include "cert-manager-webhook-exoscale.rootCAIssuer" . }}
+  dnsNames:
+  - {{ include "cert-manager-webhook-exoscale.fullname" . }}
+  - {{ include "cert-manager-webhook-exoscale.fullname" . }}.{{ .Release.Namespace }}
+  - {{ include "cert-manager-webhook-exoscale.fullname" . }}.{{ .Release.Namespace }}.svc
