@@ -1,58 +1,66 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/cert-manager/cert-manager/d53c0b9270f8cd90d908460d69502694e1838f5f/logo/logo-small.png" height="256" width="256" alt="cert-manager project logo" />
-</p>
+# cert-manager-webhook-exoscale
 
-# ACME webhook example
+A cert-manager webhook solver implementation for [Exoscale DNS](https://www.exoscale.com/dns/).
 
-The ACME issuer type supports an optional 'webhook' solver, which can be used
-to implement custom DNS01 challenge solving logic.
+## Installation
 
-This is useful if you need to use cert-manager with a DNS provider that is not
-officially supported in cert-manager core.
+Make sure that cert-manager is installed before installing the webhook.
+For more information, consult the [cert-manager documentation](https://cert-manager.io/docs/installation/).
 
-## Why not in core?
+Use helm to install the webhook:
 
-As the project & adoption has grown, there has been an influx of DNS provider
-pull requests to our core codebase. As this number has grown, the test matrix
-has become un-maintainable and so, it's not possible for us to certify that
-providers work to a sufficient level.
+<!-- x-release-please-start-version -->
 
-By creating this 'interface' between cert-manager and DNS providers, we allow
-users to quickly iterate and test out new integrations, and then packaging
-those up themselves as 'extensions' to cert-manager.
-
-We can also then provide a standardised 'testing framework', or set of
-conformance tests, which allow us to validate that a DNS provider works as
-expected.
-
-## Creating your own webhook
-
-Webhook's themselves are deployed as Kubernetes API services, in order to allow
-administrators to restrict access to webhooks with Kubernetes RBAC.
-
-This is important, as otherwise it'd be possible for anyone with access to your
-webhook to complete ACME challenge validations and obtain certificates.
-
-To make the set up of these webhook's easier, we provide a template repository
-that can be used to get started quickly.
-
-### Creating your own repository
-
-### Running the test suite
-
-All DNS providers **must** run the DNS01 provider conformance testing suite,
-else they will have undetermined behaviour when used with cert-manager.
-
-**It is essential that you configure and run the test suite when creating a
-DNS01 webhook.**
-
-An example Go test file has been provided in [main_test.go](https://github.com/cert-manager/webhook-example/blob/master/main_test.go).
-
-You can run the test suite with:
-
-```bash
-$ TEST_ZONE_NAME=example.com. make test
+```shell
+helm install cert-manager-webhook-exoscale --namespace cert-manager \
+  oci://ghcr.io/glasskube/charts/cert-manager-webhook-exoscale \
+  --version 0.1.0 \
+  --set groupName=acme.mycompany.com
 ```
 
-The example file has a number of areas you must fill in and replace with your
-own options in order for tests to pass.
+<!-- x-release-please-end -->
+
+The value used for `groupName` **must** be unique in your cluster.
+For all available configuration values, check out the [`values.yaml`](./deploy/cert-manager-webhook-exoscale/values.yaml).
+
+## Usage
+
+With cert-manager and the webhook installed, you can reference the solver in an `Issuer` or `ClusterIssuer` to use it:
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: exoscale-example
+spec:
+  acme:
+    # Rest of the acme spec
+    # ...
+    solvers:
+      - dns01:
+          webhook:
+            # Replace this with the groupName used during installation
+            groupName: acme.mycompany.com
+            solverName: exoscale
+            config:
+              apiKey:
+                fromSecret:
+                  name: exoscale-api
+                  key: apiKey
+              apiSecret:
+                fromSecret:
+                  name: exoscale-api
+                  key: apiSecret
+              # UUID of the Exoscale Domain (optional)
+              # If omitted, the controller will select the correct zone
+              # automatically
+              domainId: ...
+```
+
+Check out the full example at [`examples/cluster-issuer`](./examples/cluster-issuer).
+
+It is recommended to use secret references for the API key and secrets.
+For `ClusterIssuer`s, the secret must be in the namespace where the webhook was installed.
+By default, the webhook controller has permission to read all secrets in that namespace, although that can be restricted using helm values.
+For `Issuer`s, the secret must be in the same namespace as the `Issuer`.
+By default, the webhook controller usually **does not** have permission to read that secret, so you have to allow it explicitly.
