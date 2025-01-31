@@ -14,7 +14,8 @@ certManager:
 
 image:
   repository: ghcr.io/glasskube/cert-manager-webhook-exoscale
-  tag: latest
+  # tag uses the chart's appVersion by default
+  tag:
   pullPolicy: IfNotPresent
 
 nameOverride: ""

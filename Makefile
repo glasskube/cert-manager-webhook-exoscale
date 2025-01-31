@@ -41,7 +41,6 @@ rendered-manifest.yaml: $(OUT)/rendered-manifest.yaml
 $(OUT)/rendered-manifest.yaml: $(HELM_FILES) | $(OUT)
 	helm template test \
             --set image.repository=$(IMAGE_NAME) \
-            --set image.tag=$(IMAGE_TAG) \
             deploy/cert-manager-webhook-exoscale > $@
 
 _test $(OUT) _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH):
