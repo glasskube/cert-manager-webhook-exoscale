@@ -5,7 +5,7 @@ metadata:
 spec:
   secretName: test-tls
   dnsNames:
-    - hello-webhook-1.kosmoz.local.gkube.eu
+    - example.mycompany.com
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer

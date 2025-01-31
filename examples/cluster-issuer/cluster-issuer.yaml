@@ -7,7 +7,7 @@ spec:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
     privateKeySecretRef:
       name: exoscale-example-account-key
-    email: jakob.steiner@glasskube.eu
+    email: acme@mycompany.com
     solvers:
       - dns01:
           webhook:
