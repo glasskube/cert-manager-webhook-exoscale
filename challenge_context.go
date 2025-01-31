@@ -9,7 +9,6 @@ import (
 	acmev1alpha1 "github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	egoscale "github.com/exoscale/egoscale/v3"
 	"github.com/exoscale/egoscale/v3/credentials"
-	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -18,9 +17,9 @@ import (
 type challengeContext struct {
 	k8s        *kubernetes.Clientset
 	exo        *egoscale.Client
-	cfg        customDNSProviderConfig
+	ch         *acmev1alpha1.ChallengeRequest
+	cfg        *customDNSProviderConfig
 	RecordName string
-	RecordKey  string
 	Record     *egoscale.DNSDomainRecord
 	DNSDomain  *egoscale.DNSDomain
 }
@@ -30,21 +29,21 @@ func NewChallengeContext(
 	clientset *kubernetes.Clientset,
 	ch *acmev1alpha1.ChallengeRequest,
 ) (*challengeContext, error) {
-	cc := challengeContext{k8s: clientset, RecordKey: ch.Key}
+	cc := challengeContext{k8s: clientset, ch: ch}
 
-	if err := cc.initConfig(ctx, ch.Config); err != nil {
+	if err := cc.initConfig(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := cc.initExoClient(ctx, ch); err != nil {
+	if err := cc.initExoClient(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := cc.initDomain(ctx, ch.ResolvedFQDN); err != nil {
+	if err := cc.initDomain(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := cc.initRecordName(ch.ResolvedFQDN); err != nil {
+	if err := cc.initRecordName(); err != nil {
 		return nil, err
 	}
 
@@ -55,12 +54,12 @@ func NewChallengeContext(
 	return &cc, nil
 }
 
-func (cc *challengeContext) initConfig(ctx context.Context, cfgJSON *apiext.JSON) error {
+func (cc *challengeContext) initConfig(ctx context.Context) error {
 	log := klog.FromContext(ctx)
-	if cfgJSON == nil {
+	if cc.ch.Config == nil {
 		return nil
 	}
-	if err := json.Unmarshal(cfgJSON.Raw, &cc.cfg); err != nil {
+	if err := json.Unmarshal(cc.ch.Config.Raw, &cc.cfg); err != nil {
 		return fmt.Errorf("error decoding solver config: %v", err)
 	}
 
@@ -69,23 +68,34 @@ func (cc *challengeContext) initConfig(ctx context.Context, cfgJSON *apiext.JSON
 	return nil
 }
 
-func (cc *challengeContext) loadClientCredentials(
-	ctx context.Context,
-	ch *acmev1alpha1.ChallengeRequest,
-) (*credentials.Credentials, error) {
-	if cc.cfg.SecretName != "" {
-		secret, err := cc.k8s.CoreV1().Secrets(ch.ResourceNamespace).Get(ctx, cc.cfg.SecretName, metav1.GetOptions{})
-		if err != nil {
-			return nil, err
-		}
-		return credentials.NewStaticCredentials(string(secret.Data["apiKey"]), string(secret.Data["apiSecret"])), nil
+func (cc *challengeContext) loadClientCredentials(ctx context.Context) (*credentials.Credentials, error) {
+	if apiKey, err := cc.resolveValue(ctx, cc.cfg.APIKey); err != nil {
+		return nil, err
+	} else if apiSecret, err := cc.resolveValue(ctx, cc.cfg.APISecret); err != nil {
+		return nil, err
 	} else {
-		return credentials.NewStaticCredentials(cc.cfg.APIKey, cc.cfg.APISecret), nil
+		return credentials.NewStaticCredentials(apiKey, apiSecret), nil
 	}
 }
 
-func (cc *challengeContext) initExoClient(ctx context.Context, ch *acmev1alpha1.ChallengeRequest) error {
-	if creds, err := cc.loadClientCredentials(ctx, ch); err != nil {
+func (cc *challengeContext) resolveValue(ctx context.Context, v valueOrSecretRef) (string, error) {
+	if v.FromSecret != nil {
+		secret, err := cc.k8s.CoreV1().Secrets(cc.ch.ResourceNamespace).
+			Get(ctx, v.FromSecret.Name, metav1.GetOptions{})
+		if err != nil {
+			return "", err
+		} else if value, ok := secret.Data[v.FromSecret.Key]; !ok {
+			return "", fmt.Errorf("secret %v does not have key %v", v.FromSecret.Name, v.FromSecret.Key)
+		} else {
+			return string(value), nil
+		}
+	} else {
+		return v.Value, nil
+	}
+}
+
+func (cc *challengeContext) initExoClient(ctx context.Context) error {
+	if creds, err := cc.loadClientCredentials(ctx); err != nil {
 		return err
 	} else if client, err := egoscale.NewClient(creds); err != nil {
 		return err
@@ -95,7 +105,8 @@ func (cc *challengeContext) initExoClient(ctx context.Context, ch *acmev1alpha1.
 	}
 }
 
-func (cc *challengeContext) initDomain(ctx context.Context, fqdn string) error {
+func (cc *challengeContext) initDomain(ctx context.Context) error {
+	log := klog.FromContext(ctx)
 	if cc.cfg.DomainID != "" {
 		if domain, err := cc.exo.GetDNSDomain(ctx, cc.cfg.DomainID); err != nil {
 			return err
@@ -109,14 +120,16 @@ func (cc *challengeContext) initDomain(ctx context.Context, fqdn string) error {
 		} else {
 			var found *egoscale.DNSDomain
 			for _, domain := range result.DNSDomains {
-				if isInZone(fqdn, domain.UnicodeName) && (found == nil || len(domain.UnicodeName) > len(found.UnicodeName)) {
+				if isInZone(cc.ch.ResolvedFQDN, domain.UnicodeName) &&
+					(found == nil || len(domain.UnicodeName) > len(found.UnicodeName)) {
 					found = &domain
 				}
 			}
 
 			if found == nil {
-				return fmt.Errorf("no zone found to host FQDN %v", fqdn)
+				return fmt.Errorf("no zone found to host FQDN %v", cc.ch.ResolvedFQDN)
 			}
+			log.Info(fmt.Sprintf("found domain %+v", found))
 			cc.DNSDomain = found
 			return nil
 		}
@@ -137,18 +150,18 @@ func normalizeZone(zone string) string {
 	return zone
 }
 
-func (cc *challengeContext) initRecordName(fqdn string) error {
-	if !isInZone(fqdn, cc.DNSDomain.UnicodeName) {
-		return fmt.Errorf("%v is not a subdomain of %v", fqdn, cc.DNSDomain.UnicodeName)
+func (cc *challengeContext) initRecordName() error {
+	if !isInZone(cc.ch.ResolvedFQDN, cc.DNSDomain.UnicodeName) {
+		return fmt.Errorf("%v is not a subdomain of %v", cc.ch.ResolvedFQDN, cc.DNSDomain.UnicodeName)
 	}
-	cc.RecordName = strings.TrimSuffix(fqdn, normalizeZone(cc.DNSDomain.UnicodeName))
+	cc.RecordName = strings.TrimSuffix(cc.ch.ResolvedFQDN, normalizeZone(cc.DNSDomain.UnicodeName))
 	return nil
 }
 
 func (cc *challengeContext) initRecord(ctx context.Context) error {
-	log := klog.FromContext(ctx).WithValues("recordName", cc.RecordName, "recordKey", cc.RecordKey)
+	log := klog.FromContext(ctx).WithValues("recordName", cc.RecordName, "recordKey", cc.ch.Key)
 	log.Info(fmt.Sprintf("looking for existing record in domain %+v", cc.DNSDomain))
-	expectedContent := fmt.Sprintf(`"%v"`, cc.RecordKey)
+	expectedContent := fmt.Sprintf(`"%v"`, cc.ch.Key)
 	if result, err := cc.exo.ListDNSDomainRecords(ctx, cc.DNSDomain.ID); err != nil {
 		return err
 	} else {
@@ -171,7 +184,7 @@ func (cc *challengeContext) CreateRecord(ctx context.Context) (*egoscale.Operati
 	log := klog.FromContext(ctx)
 	req := egoscale.CreateDNSDomainRecordRequest{
 		Name:    cc.RecordName,
-		Content: cc.RecordKey,
+		Content: cc.ch.Key,
 		Type:    egoscale.CreateDNSDomainRecordRequestTypeTXT,
 		Ttl:     60,
 	}

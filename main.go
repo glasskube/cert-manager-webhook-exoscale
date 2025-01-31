@@ -7,6 +7,7 @@ import (
 	acmev1alpha1 "github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
 	egoscale "github.com/exoscale/egoscale/v3"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -63,10 +64,14 @@ type customDNSProviderConfig struct {
 	// These fields will be set by users in the
 	// `issuer.spec.acme.dns01.providers.webhook.config` field.
 
-	APIKey     string        `json:"apiKey"`
-	APISecret  string        `json:"apiSecret"`
-	SecretName string        `json:"secretName"`
-	DomainID   egoscale.UUID `json:"domainId"`
+	APIKey    valueOrSecretRef `json:"apiKey"`
+	APISecret valueOrSecretRef `json:"apiSecret"`
+	DomainID  egoscale.UUID    `json:"domainId"`
+}
+
+type valueOrSecretRef struct {
+	Value      string                    `json:"value"`
+	FromSecret *corev1.SecretKeySelector `json:"fromSecret"`
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME

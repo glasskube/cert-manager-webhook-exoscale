@@ -1,0 +1,24 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: exoscale-example
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: exoscale-example-account-key
+    email: jakob.steiner@glasskube.eu
+    solvers:
+      - dns01:
+          webhook:
+            groupName: acme.mycompany.com
+            solverName: exoscale
+            config:
+              apiKey:
+                fromSecret:
+                  name: exoscale-api
+                  key: apiKey
+              apiSecret:
+                fromSecret:
+                  name: exoscale-api
+                  key: apiSecret
