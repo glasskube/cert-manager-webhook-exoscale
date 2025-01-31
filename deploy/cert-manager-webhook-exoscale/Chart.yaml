@@ -2,7 +2,8 @@ apiVersion: v2
 name: cert-manager-webhook-exoscale
 description: cert-manager webhook for Exoscale DNS API
 home: https://github.com/glasskube/cert-manager-webhook-exoscale
-icon: https://raw.githubusercontent.com/cert-manager/cert-manager/master/logo/logo-small.png
+icon: >-
+  https://raw.githubusercontent.com/cert-manager/cert-manager/master/logo/logo-small.png
 keywords:
   - cert-manager
   - exoscale
