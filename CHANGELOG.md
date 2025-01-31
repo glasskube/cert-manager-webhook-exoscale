@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1](https://github.com/glasskube/cert-manager-webhook-exoscale/compare/0.1.0...0.1.1) (2025-01-31)
+
+
+### Docs
+
+* update examples ([c9b9c65](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/c9b9c65113d067a21af6705bac3a494b4823d858))
+* update readme ([7eb4002](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/7eb40029559f8cdd18e1d0326bc47b7eb1eaf509))
+
 ## 0.1.0 (2025-01-31)
 
 
