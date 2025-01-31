@@ -40,7 +40,7 @@ func NewChallengeContext(
 		return nil, err
 	}
 
-	if err := cc.initDomain(ctx); err != nil {
+	if err := cc.initDomain(ctx, ch.ResolvedFQDN); err != nil {
 		return nil, err
 	}
 
@@ -95,24 +95,53 @@ func (cc *challengeContext) initExoClient(ctx context.Context, ch *acmev1alpha1.
 	}
 }
 
-func (cc *challengeContext) initDomain(ctx context.Context) error {
-	if domain, err := cc.exo.GetDNSDomain(ctx, cc.cfg.DomainID); err != nil {
-		return err
+func (cc *challengeContext) initDomain(ctx context.Context, fqdn string) error {
+	if cc.cfg.DomainID != "" {
+		if domain, err := cc.exo.GetDNSDomain(ctx, cc.cfg.DomainID); err != nil {
+			return err
+		} else {
+			cc.DNSDomain = domain
+			return nil
+		}
 	} else {
-		cc.DNSDomain = domain
-		return nil
+		if result, err := cc.exo.ListDNSDomains(ctx); err != nil {
+			return err
+		} else {
+			var found *egoscale.DNSDomain
+			for _, domain := range result.DNSDomains {
+				if isInZone(fqdn, domain.UnicodeName) && (found == nil || len(domain.UnicodeName) > len(found.UnicodeName)) {
+					found = &domain
+				}
+			}
+
+			if found == nil {
+				return fmt.Errorf("no zone found to host FQDN %v", fqdn)
+			}
+			cc.DNSDomain = found
+			return nil
+		}
 	}
 }
 
-func (cc *challengeContext) initRecordName(fqdn string) error {
-	zone := "." + cc.DNSDomain.UnicodeName
+func isInZone(fqdn string, zone string) bool {
+	return strings.HasSuffix(fqdn, normalizeZone(zone))
+}
+
+func normalizeZone(zone string) string {
+	if !strings.HasPrefix(zone, ".") {
+		zone = "." + zone
+	}
 	if !strings.HasSuffix(zone, ".") {
 		zone = zone + "."
 	}
-	if !strings.HasSuffix(fqdn, zone) {
+	return zone
+}
+
+func (cc *challengeContext) initRecordName(fqdn string) error {
+	if !isInZone(fqdn, cc.DNSDomain.UnicodeName) {
 		return fmt.Errorf("%v is not a subdomain of %v", fqdn, cc.DNSDomain.UnicodeName)
 	}
-	cc.RecordName = strings.TrimSuffix(fqdn, zone)
+	cc.RecordName = strings.TrimSuffix(fqdn, normalizeZone(cc.DNSDomain.UnicodeName))
 	return nil
 }
 
