@@ -64,3 +64,26 @@ For `ClusterIssuer`s, the secret must be in the namespace where the webhook was 
 By default, the webhook controller has permission to read all secrets in that namespace, although that can be restricted using helm values.
 For `Issuer`s, the secret must be in the same namespace as the `Issuer`.
 By default, the webhook controller usually **does not** have permission to read that secret, so you have to allow it explicitly.
+
+## Required IAM Permissions
+
+The following IAM policy is recommended for the webhook controller:
+
+```json
+{
+  "default-service-strategy": "deny",
+  "services": {
+    "dns": {
+      "type": "rules",
+      "rules": [
+        {
+          "action": "allow",
+          "expression": "operation in ['list-dns-domains', 'get-dns-domain', 'list-dns-domain-records', 'get-dns-domain-record', 'create-dns-domain-record', 'delete-dns-domain-record']"
+        }
+      ]
+    }
+  }
+}
+```
+
+If the config contains a `domainId`, the `list-dns-domains` can be omitted.
