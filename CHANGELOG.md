@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.1.1](https://github.com/glasskube/cert-manager-webhook-exoscale/compare/0.1.0...0.1.1) (2025-03-06)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/exoscale/egoscale/v3 to v3.1.10 ([#14](https://github.com/glasskube/cert-manager-webhook-exoscale/issues/14)) ([855a817](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/855a81772b4a90e6b8b8754f0423a93554e8be8f))
+
+
+### Other
+
+* **deps:** update azure/setup-helm action to v4.3.0 ([#11](https://github.com/glasskube/cert-manager-webhook-exoscale/issues/11)) ([20a8294](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/20a82947077a223d6abcbffd1dd41074b7ca40e2))
+* **deps:** update dependency go to v1.24.0 ([#9](https://github.com/glasskube/cert-manager-webhook-exoscale/issues/9)) ([de44345](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/de44345e389cad18d1722efc8c838f9e1d3e74e9))
+* **deps:** update docker/build-push-action action to v6.15.0 ([#12](https://github.com/glasskube/cert-manager-webhook-exoscale/issues/12)) ([0a378a4](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/0a378a42b2b2dbc4601b67e3819104e5727ee930))
+* **deps:** update docker/metadata-action action to v5.7.0 ([#13](https://github.com/glasskube/cert-manager-webhook-exoscale/issues/13)) ([442aac3](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/442aac3621011a35bc7e339304d7ebfce21badca))
+* **deps:** update docker/setup-buildx-action action to v3.10.0 ([#8](https://github.com/glasskube/cert-manager-webhook-exoscale/issues/8)) ([cba054a](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/cba054af18640d07a71d5a5abd5500bf28eb0817))
+* **deps:** update golang docker tag to v1.24 ([#10](https://github.com/glasskube/cert-manager-webhook-exoscale/issues/10)) ([4e9ae36](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/4e9ae36996659da52f082248ac891f599ce04af0))
+* **deps:** update googleapis/release-please-action action to v4.1.4 ([#15](https://github.com/glasskube/cert-manager-webhook-exoscale/issues/15)) ([dbae401](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/dbae401e40e8d1f9b9739ec2c46272a85208ec37))
+* **deps:** update googleapis/release-please-action action to v4.1.5 ([#17](https://github.com/glasskube/cert-manager-webhook-exoscale/issues/17)) ([af8883e](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/af8883e2201233b3a8b3a59ce07d07c5a65762ff))
+
+
+### Docs
+
+* update examples ([c9b9c65](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/c9b9c65113d067a21af6705bac3a494b4823d858))
+* update readme ([a357242](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/a35724273447bd9ccd3fe8e32b200239a08a48a3))
+* update readme ([7eb4002](https://github.com/glasskube/cert-manager-webhook-exoscale/commit/7eb40029559f8cdd18e1d0326bc47b7eb1eaf509))
+
 ## 0.1.0 (2025-01-31)
 
 
