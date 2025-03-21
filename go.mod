@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/cert-manager/cert-manager v1.16.3
-	github.com/exoscale/egoscale/v3 v3.1.12
+	github.com/exoscale/egoscale/v3 v3.1.13
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.1
