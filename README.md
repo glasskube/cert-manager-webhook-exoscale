@@ -14,7 +14,7 @@ Use helm to install the webhook:
 ```shell
 helm install cert-manager-webhook-exoscale --namespace cert-manager \
   oci://ghcr.io/glasskube/charts/cert-manager-webhook-exoscale \
-  --version 0.1.0 \
+  --version 0.1.1 \
   --set groupName=acme.mycompany.com
 ```
 
