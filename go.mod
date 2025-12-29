@@ -1,10 +1,12 @@
 module github.com/glasskube/cert-manager-webhook-exoscale
 
-go 1.23.0
+go 1.23.8
+
+toolchain go1.24.11
 
 require (
 	github.com/cert-manager/cert-manager v1.16.3
-	github.com/exoscale/egoscale/v3 v3.1.18
+	github.com/exoscale/egoscale/v3 v3.1.33
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.1
@@ -48,6 +50,8 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.7 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
