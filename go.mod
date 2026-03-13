@@ -6,7 +6,7 @@ toolchain go1.24.11
 
 require (
 	github.com/cert-manager/cert-manager v1.16.3
-	github.com/exoscale/egoscale/v3 v3.1.33
+	github.com/exoscale/egoscale/v3 v3.1.34
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1
 	k8s.io/client-go v0.31.1
