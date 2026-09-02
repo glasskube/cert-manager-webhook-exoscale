@@ -2,7 +2,7 @@ module github.com/glasskube/cert-manager-webhook-exoscale
 
 go 1.23.8
 
-toolchain go1.24.11
+toolchain go1.27.1
 
 require (
 	github.com/cert-manager/cert-manager v1.16.3
